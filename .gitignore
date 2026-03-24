@@ -36,12 +36,12 @@ env/
 # ===========================
 # Terraform
 # ===========================
-terraform/.terraform/
-terraform/terraform.tfstate
-terraform/terraform.tfstate.backup
-terraform/tfplan
-terraform/terraform.tfvars
-terraform/.terraform.tfstate.lock.info
+.terraform/
+*.tfstate
+*.tfstate.backup
+tfplan
+terraform.tfvars
+.terraform.tfstate.lock.info
 # Keep .terraform.lock.hcl (provider lock)
 
 # ===========================
