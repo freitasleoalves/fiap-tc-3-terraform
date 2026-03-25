@@ -50,7 +50,7 @@ variable "aks_node_count" {
 variable "aks_min_count" {
   description = "Minimum node count for AKS autoscaling"
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "aks_max_count" {
