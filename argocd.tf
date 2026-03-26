@@ -42,3 +42,33 @@ resource "helm_release" "argocd" {
 
   depends_on = [azurerm_kubernetes_cluster.aks]
 }
+
+# ============================================
+# Ingress NGINX (via Helm)
+# ============================================
+
+resource "helm_release" "ingress_nginx" {
+  name             = "ingress-nginx"
+  repository       = "https://kubernetes.github.io/ingress-nginx"
+  chart            = "ingress-nginx"
+  version          = "4.12.1"
+  namespace        = "ingress-nginx"
+  create_namespace = true
+
+  set {
+    name  = "controller.service.type"
+    value = "LoadBalancer"
+  }
+
+  set {
+    name  = "controller.service.annotations.service\\.beta\\.kubernetes\\.io/azure-load-balancer-health-probe-request-path"
+    value = "/healthz"
+  }
+
+  set {
+    name  = "controller.admissionWebhooks.enabled"
+    value = "false"
+  }
+
+  depends_on = [azurerm_kubernetes_cluster.aks]
+}
