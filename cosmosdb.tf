@@ -27,7 +27,7 @@ resource "azurerm_cosmosdb_account" "main" {
 
 resource "azurerm_cosmosdb_table" "evaluation_events" {
   count               = var.deploy_databases ? 1 : 0
-  name                = "EvaluationEvents"
+  name                = "ToggleMasterAnalytics"
   resource_group_name = azurerm_resource_group.main.name
   account_name        = azurerm_cosmosdb_account.main[0].name
 
