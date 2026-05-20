@@ -23,6 +23,12 @@ resource "azurerm_cosmosdb_account" "main" {
     location          = azurerm_resource_group.main.location
     failover_priority = 0
   }
+
+  timeouts {
+    create = "60m"
+    update = "60m"
+    delete = "60m"
+  }
 }
 
 resource "azurerm_cosmosdb_table" "evaluation_events" {
