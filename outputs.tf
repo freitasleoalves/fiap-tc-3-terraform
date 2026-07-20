@@ -171,3 +171,22 @@ output "ingress_nginx_get_ip_command" {
   description = "Command to get the Ingress NGINX external IP"
   value       = "kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"
 }
+
+# ============================================
+# Observabilidade (Fase 4) - Datadog / PagerDuty
+# ============================================
+
+output "datadog_monitor_ids" {
+  description = "IDs dos Datadog Monitors de taxa de erros 5xx, por serviço"
+  value       = { for k, m in datadog_monitor.http_5xx_error_rate : k => m.id }
+}
+
+output "pagerduty_escalation_policy_url" {
+  description = "URL da Escalation Policy no PagerDuty"
+  value       = "https://app.pagerduty.com/escalation_policies/${pagerduty_escalation_policy.togglemaster.id}"
+}
+
+output "pagerduty_service_urls" {
+  description = "URLs dos Services no PagerDuty, por microsserviço"
+  value       = { for k, s in pagerduty_service.svc : k => "https://app.pagerduty.com/service-directory/${s.id}" }
+}

@@ -140,3 +140,60 @@ variable "master_key" {
   sensitive   = true
   default     = "master-key-prod-2026"
 }
+
+# ============================================
+# Observabilidade (Fase 4) - Datadog / PagerDuty / Discord / Self-Healing
+# ============================================
+
+variable "monitored_services" {
+  description = "Microsserviços cobertos pelos alertas inteligentes (Datadog Monitor), PagerDuty e self-healing"
+  type        = list(string)
+  default     = ["evaluation-service", "auth-service"]
+}
+
+variable "datadog_api_key" {
+  description = "Datadog API Key (Organization Settings > API Keys)"
+  type        = string
+  sensitive   = true
+}
+
+variable "datadog_app_key" {
+  description = "Datadog Application Key (Organization Settings > Application Keys), necessária para o provider gerenciar monitors/webhooks/integrações"
+  type        = string
+  sensitive   = true
+}
+
+variable "datadog_site" {
+  description = "Site do Datadog (datadoghq.com, datadoghq.eu, us5.datadoghq.com, etc.)"
+  type        = string
+  default     = "datadoghq.com"
+}
+
+variable "pagerduty_token" {
+  description = "PagerDuty API Token (User Settings > API Access Keys), com permissão de leitura e escrita"
+  type        = string
+  sensitive   = true
+}
+
+variable "pagerduty_user_email" {
+  description = "E-mail do usuário PagerDuty (dono da conta) que receberá os incidentes na escalation policy"
+  type        = string
+}
+
+variable "discord_webhook_url" {
+  description = "URL do Webhook do canal Discord usado para as notificações de incidente (ChatOps). Ex: https://discord.com/api/webhooks/<id>/<token>"
+  type        = string
+  sensitive   = true
+}
+
+variable "github_selfheal_token" {
+  description = "GitHub PAT (escopo 'repo') usado pelo Datadog para disparar o repository_dispatch de self-healing no repositório GitOps"
+  type        = string
+  sensitive   = true
+}
+
+variable "gitops_repo" {
+  description = "Repositório GitOps (owner/repo) onde roda o workflow de self-healing (.github/workflows/self-heal.yml)"
+  type        = string
+  default     = "freitasleoalves/fiap-tc-3-gitops"
+}

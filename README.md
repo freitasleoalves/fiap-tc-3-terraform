@@ -46,6 +46,8 @@ Infraestrutura como código para a plataforma ToggleMaster, provisionando todos 
 | Redis* | `azurerm_redis_cache` | Cache compartilhado |
 | Service Bus* | `azurerm_servicebus_namespace` | Fila de eventos de avaliação |
 | Cosmos DB* | `azurerm_cosmosdb_account` | Armazenamento de eventos (Table API) |
+| PagerDuty Escalation Policy + Services | `pagerduty_escalation_policy`, `pagerduty_service`, `pagerduty_service_integration` | Gerenciamento de incidentes (Fase 4) |
+| Datadog Monitors + Webhooks + Integração PagerDuty | `datadog_monitor`, `datadog_webhook`, `datadog_integration_pagerduty_service_object` | Alertas inteligentes, ChatOps (Discord) e Self-Healing (Fase 4) |
 
 > *Recursos opcionais — provisionados apenas quando `deploy_databases = true`
 
@@ -244,7 +246,7 @@ terraform output -raw cosmosdb_connection_string
 
 ```
 ├── main.tf           # Resource Group e locals
-├── providers.tf      # Providers (azurerm, helm) e backend remoto
+├── providers.tf      # Providers (azurerm, helm, datadog, pagerduty) e backend remoto
 ├── variables.tf      # Declaração de variáveis
 ├── outputs.tf        # Outputs (endpoints, credentials, connection strings)
 ├── network.tf        # VNet e Subnet
@@ -254,6 +256,71 @@ terraform output -raw cosmosdb_connection_string
 ├── redis.tf          # Redis Cache
 ├── servicebus.tf     # Service Bus namespace e queue
 ├── cosmosdb.tf       # Cosmos DB account e table
+├── pagerduty.tf      # Escalation Policy, Services e integração Datadog (Fase 4)
+├── datadog.tf        # Monitors, Webhooks (Discord + Self-Healing) e integração PagerDuty (Fase 4)
 ├── terraform.tfvars  # Valores das variáveis (gitignored)
 └── README.md
 ```
+
+## Observabilidade (Fase 4) - Datadog, PagerDuty e Discord
+
+Esta seção provisiona, como código, a parte "SaaS" dos Alertas Inteligentes e
+Self-Healing exigidos no desafio (a stack Opensource — Prometheus, Loki,
+Grafana, OTel Collector — está no repositório `fiap-tc-3-gitops`).
+
+### 1. Criar as contas (uma vez, manualmente)
+
+| Serviço | Como | O que guardar |
+|---------|------|----------------|
+| **Datadog** | [datadoghq.com/free-datadog-trial](https://www.datadoghq.com/free-datadog-trial/) (conta free/trial) | API Key e Application Key em *Organization Settings* |
+| **PagerDuty** | [pagerduty.com/sign-up](https://www.pagerduty.com/sign-up/) (conta free para até 5 usuários) | API Token em *User Settings > API Access Keys*; e-mail do usuário criado no cadastro |
+| **Discord** | Crie um servidor/canal para os alertas → *Configurações do Canal > Integrações > Webhooks > Novo Webhook* | URL do Webhook |
+| **GitHub PAT (self-healing)** | [github.com/settings/tokens](https://github.com/settings/tokens) → novo *classic token* com escopo `repo` | Token (usado pelo Datadog para chamar a Dispatches API) |
+
+### 2. Preencher `terraform.tfvars`
+
+```hcl
+datadog_api_key       = "<sua API Key>"
+datadog_app_key        = "<sua Application Key>"
+datadog_site           = "datadoghq.com"
+
+pagerduty_token         = "<seu API Token>"
+pagerduty_user_email    = "<email da sua conta PagerDuty>"
+
+discord_webhook_url     = "https://discord.com/api/webhooks/<id>/<token>"
+github_selfheal_token   = "<GitHub PAT com escopo 'repo'>"
+
+monitored_services      = ["evaluation-service", "auth-service"]
+```
+
+### 3. Aplicar
+
+```bash
+terraform init
+terraform apply
+```
+
+Isso cria: uma Escalation Policy e um Service no PagerDuty por serviço
+monitorado (cada um já integrado com o Datadog), os Webhooks do Datadog
+(Discord + self-healing via GitHub) e um `datadog_monitor` de taxa de erros
+5xx por serviço, já com a mensagem configurada para acionar PagerDuty +
+Discord + self-healing em conjunto quando o alerta dispara (`@pagerduty-...
+@webhook-discord-alerts @webhook-github-selfheal-...`).
+
+### 4. Configurar os secrets do self-healing no repositório GitOps
+
+O workflow `.github/workflows/self-heal.yml` (repositório `fiap-tc-3-gitops`)
+precisa destes secrets em *Settings > Secrets and variables > Actions*:
+
+| Secret | Valor |
+|--------|-------|
+| `AZURE_CREDENTIALS` | JSON de um Service Principal (`az ad sp create-for-rbac --sdk-auth`) com permissão sobre o AKS |
+| `AKS_RESOURCE_GROUP` | Nome do Resource Group (`output.resource_group_name`) |
+| `AKS_CLUSTER_NAME` | Nome do cluster AKS (`output.aks_cluster_name`) |
+
+### 5. Preencher a API Key do Datadog no OTel Collector
+
+O exporter `datadog` do OTel Collector (repositório `fiap-tc-3-gitops`,
+`addons/otel-collector-gateway/secrets.yaml`) usa a **mesma** API Key do
+Datadog, mas precisa ser configurado separadamente como um Kubernetes Secret
+(não é lido a partir deste Terraform).
